@@ -1,0 +1,69 @@
+mkdir thehive-cortex-stack && cd thehive-cortex-stack
+
+nano docker-compose.yml
+
+version: '3.7'
+
+services:
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.17.0
+    environment:
+      - discovery.type=single-node
+      - bootstrap.memory_lock=true
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms1g -Xmx1g
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - esdata:/usr/share/elasticsearch/data
+    ports:
+      - "9200:9200"
+
+  thehive:
+    image: strangebee/thehive:5.2
+    environment:
+      - THEHIVE_JAVA_OPTS=-Xms1g -Xmx2g
+    depends_on:
+      - elasticsearch
+    volumes:
+      - thehive-data:/opt/thehive/data
+    ports:
+      - "9000:9000"
+    restart: always
+
+  cortex:
+    image: thehiveproject/cortex:3.1.1
+    environment:
+      - jobDirectory=/opt/cortex/jobs
+      - analyzerRunAs=root
+      - cortex_jvm_opts=-Xms512m -Xmx1g
+    depends_on:
+      - elasticsearch
+    volumes:
+      - cortex-data:/opt/cortex/data
+      - cortex-jobs:/opt/cortex/jobs
+    ports:
+      - "9001:9001"
+    restart: always
+
+volumes:
+  esdata:
+  thehive-data:
+  cortex-data:
+  cortex-jobs:
+
+
+
+
+
+
+
+docker exec -it thehive-cortex-stack_cortex_1 bash
+cd /opt
+git clone https://github.com/TheHive-Project/Cortex-Analyzers.git
+cd Cortex-Analyzers
+cd analyzers/DomainTools
+pip3 install -r requirements.txt
+
